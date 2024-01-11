@@ -29,8 +29,12 @@ int main(int argc, char** argv) {
  MPI_Init(&argc, &argv);
 
  int world_size, rank;
- MPI_Comm_size(MPI_COMM_WORLD, &world_size);
- MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+ rank = MPI::COMM_WORLD.Get_rank(); 
+ world_size = MPI::COMM_WORLD.Get_size();
+
+ //MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+ //MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
  if (world_size != NUM_PHILOSOPHERS) {
  std::cerr << "Očekivano je " << NUM_PHILOSOPHERS << " procesa." << std::endl;
@@ -46,31 +50,31 @@ int main(int argc, char** argv) {
  // Filozof razmišlja
  philosopherStates[rank] = THINKING;
  printState(philosopherStates, rank);
- usleep(1000000); // Simulacija razmišljanja
+ usleep(1000000); // 
 
  // Filozof želi jesti
  philosopherStates[rank] = EATING;
  printState(philosopherStates, rank);
 
- // Slanje zahtjeva za lijevim štapićem
- MPI_Isend(&rank, 1, MPI_INT, (rank + 1) % NUM_PHILOSOPHERS, 0, MPI_COMM_WORLD, &sendRequest);
+ 
+ MPI_Isend(&rank, 1, MPI_INT, (rank + 1) % NUM_PHILOSOPHERS, 0, MPI::COMM_WORLD, &sendRequest);
 
-//Slanje zahtjeva za desnim štapićem
-MPI_Isend(&rank, 1, MPI_INT, (rank + NUM_PHILOSOPHERS - 1) % NUM_PHILOSOPHERS, 0, MPI_COMM_WORLD, &sendRequest);
+
+MPI_Isend(&rank, 1, MPI_INT, (rank + NUM_PHILOSOPHERS - 1) % NUM_PHILOSOPHERS, 0, MPI::COMM_WORLD, &sendRequest);
 
 MPI_Status status;
 
 //Cekanje potvrde za lijevi štapić
-MPI_Probe((rank+1)%NUM_PHILOSOPHERS,0,MPI_COMM_WORLD,&status);
+MPI_Probe((rank+1)%NUM_PHILOSOPHERS,0,MPI::COMM_WORLD,&status);
 int count;
 MPI_Get_count(&status,MPI_INT,&count);
-MPI_Irecv(NULL, 0, MPI_INT, (rank + 1) % NUM_PHILOSOPHERS, 0, MPI_COMM_WORLD, &recvRequest);
+MPI_Irecv(NULL, 0, MPI_INT, (rank + 1) % NUM_PHILOSOPHERS, 0, MPI::COMM_WORLD, &recvRequest);
 MPI_Wait(&recvRequest, MPI_STATUS_IGNORE);
 
 //Cekanje potvrde za desni štapić
-MPI_Probe((rank+1)%NUM_PHILOSOPHERS,0,MPI_COMM_WORLD,&status);
+MPI_Probe((rank+1)%NUM_PHILOSOPHERS,0,MPI::COMM_WORLD,&status);
 MPI_Get_count(&status,MPI_INT,&count);
-MPI_Irecv(NULL, 0, MPI_INT, (rank + NUM_PHILOSOPHERS - 1) % NUM_PHILOSOPHERS, 0, MPI_COMM_WORLD, &recvRequest);
+MPI_Irecv(NULL, 0, MPI_INT, (rank + NUM_PHILOSOPHERS - 1) % NUM_PHILOSOPHERS, 0, MPI::COMM_WORLD, &recvRequest);
 MPI_Wait(&recvRequest, MPI_STATUS_IGNORE);
 
 //Filozof jede
@@ -78,15 +82,15 @@ printState(philosopherStates, rank);
 usleep(1000000); // Simulacija jedenja
 
 //Vraćanje štapića na stol
-MPI_Isend(&rank, 1, MPI_INT, (rank + 1) % NUM_PHILOSOPHERS, 0, MPI_COMM_WORLD, &sendRequest);
-MPI_Isend(&rank, 1, MPI_INT, (rank + NUM_PHILOSOPHERS - 1) % NUM_PHILOSOPHERS, 0, MPI_COMM_WORLD, &sendRequest);
+MPI_Isend(&rank, 1, MPI_INT, (rank + 1) % NUM_PHILOSOPHERS, 0, MPI::COMM_WORLD, &sendRequest);
+MPI_Isend(&rank, 1, MPI_INT, (rank + NUM_PHILOSOPHERS - 1) % NUM_PHILOSOPHERS, 0, MPI::COMM_WORLD, &sendRequest);
 
 //Cekanje potvrde za vraćanje lijevog štapića
-MPI_Irecv(NULL, 0, MPI_INT, (rank + 1) % NUM_PHILOSOPHERS, 0, MPI_COMM_WORLD, &recvRequest);
+MPI_Irecv(NULL, 0, MPI_INT, (rank + 1) % NUM_PHILOSOPHERS, 0, MPI::COMM_WORLD, &recvRequest);
 MPI_Wait(&recvRequest, MPI_STATUS_IGNORE);
 
 //Cekanje potvrde za vraćanje desnog štapića
-MPI_Irecv(NULL, 0, MPI_INT, (rank + NUM_PHILOSOPHERS - 1) % NUM_PHILOSOPHERS, 0, MPI_COMM_WORLD, &recvRequest);
+MPI_Irecv(NULL, 0, MPI_INT, (rank + NUM_PHILOSOPHERS - 1) % NUM_PHILOSOPHERS, 0, MPI::COMM_WORLD, &recvRequest);
 MPI_Wait(&recvRequest, MPI_STATUS_IGNORE);
  }
 

@@ -11,7 +11,7 @@ int main (int argc, char* argv[]) {
 
         MPI::Init(argc, argv); 
         rang = MPI::COMM_WORLD.Get_rank(); 
-        size=MPI::COMM_WORLD.Get_size(); 
+        size = MPI::COMM_WORLD.Get_size(); 
         int a[size][size], b[size];
         if( rang == 0 ) {
                 for (int i=0;i<size;i++){

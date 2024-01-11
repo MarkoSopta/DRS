@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
 
     fsm.close();
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI::COMM_WORLD);
 
     if (rang < v.size()) {
         cout << "Proces ranga " << rang << " , je ucitao: " << v[rang] << endl;
