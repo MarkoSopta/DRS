@@ -6,8 +6,16 @@ int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
 
     int rank, size;
+<<<<<<< HEAD
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
+=======
+	
+	rank = MPI::COMM_WORLD.Get_rank();
+    size = MPI::COMM_WORLD.Get_size();
+   // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+   // MPI_Comm_size(MPI_COMM_WORLD, &size);
+>>>>>>> 9bb5630629e9b0103bf01869685076081de4328a
 
    
     std::vector<int> localVector(100, rank + 1);  // Primer: punjenje lokalnog vektora vrednostima rank + 1
