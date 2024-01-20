@@ -1,15 +1,3 @@
-/*
-
-Za slanje ranga procesa 0 upotrijebljen je MPI::Comm.Bcast svim
-procesima unutar komunikatora. Nakon primitka procesi vraćaju
-procesu 0 naziv računala koje je primilo poruku. Proces 0 prima
-poruku od ostalih procesa MPI::Comm.Irecv. Ispisati na zaslon da
-su primljene poruke na strani procesa 0. Program napisati
-korištenjem C++ funkcija.
-
-*/
-
-
 #include <iostream>
 #include <string>
 #include <mpi.h>
@@ -33,8 +21,10 @@ int main(int argc, char* argv[]) {
         int i = 0;
         
         while (i < size - 1) {
+            
+            MPI::COMM_WORLD.Probe(MPI::ANY_SOURCE, 25, status);
             // Asinkrono primanje poruke
-            zahtjev = MPI::COMM_WORLD.Irecv(&b, 100, MPI::CHAR, MPI::ANY_SOURCE, 25);
+            zahtjev = MPI::COMM_WORLD.Irecv(&b, 100, MPI::CHAR, status.Get_source(), 25);
             zahtjev.Wait(status); // Čekanje na završetak primanja
             i++;
             cout << "Proces 0 primio je poruku od instance " << b << endl;
@@ -51,5 +41,3 @@ int main(int argc, char* argv[]) {
     MPI::Finalize();
     return 0;
 }
-
- 
