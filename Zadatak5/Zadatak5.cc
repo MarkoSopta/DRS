@@ -1,63 +1,44 @@
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <string>
-#include <cmath>
+/*
+Za slanje ranga procesa 0 upotrijebljen je MPI::Comm.Bcast svim
+procesima unutar komunikatora. Nakon primitka procesi vraćaju
+procesu 0 naziv računala koje je primilo poruku. Proces 0 prima
+poruku od ostalih procesa MPI::Comm.Irecv. Ispisati na zaslon da
+su primljene poruke na strani procesa 0. Program napisati
+korištenjem C++ funkcija.
+*/
+
 #include <mpi.h>
+#include <iostream>
 
-using namespace std;
 
-int main(int argc, char* argv[]) {
-int rang;
-int size;
-MPI::Init(argc, argv);
-rang = MPI::COMM_WORLD.Get_rank();
-size = MPI::COMM_WORLD.Get_size();
-MPI::Request zahtjev;
-MPI::Status status;
+int main(int argc, char** argv) {
+    MPI::Init(argc, argv);
 
-vector<string> v;
-string linija;
-ifstream fsm;
+    int rank = MPI::COMM_WORLD.Get_rank();
+    int size = MPI::COMM_WORLD.Get_size();
 
-int c = 0;
-ifstream fs;
-string line;
+    const int computerNameMaxLength = MPI_MAX_PROCESSOR_NAME;
+    char computerName[computerNameMaxLength];
+    int nameLength;
 
-if (rang == 0) {
-fs.open("input.txt");
-while (getline(fs, line)) {
-c += line.length();
-}
-fs.close();
-}
+    if (rank == 0) {
+        // Proces 0 šalje svo rang svim procesima
+        MPI::COMM_WORLD.Bcast(&rank, 1, MPI::INT, 0);
 
-MPI::COMM_WORLD.Bcast(&c, 1, MPI::INT, 0);
+        // Proces 0 prima poruke od ostalih procesa
+        for (int source = 1; source < size; ++source) {
+            MPI::COMM_WORLD.Recv(computerName, computerNameMaxLength, MPI::CHAR, source, 0);
+            std::cout << "Primljena poruka od procesa " << source << ": " << computerName << std::endl;
+        }
+    } else {
+        
+        MPI::COMM_WORLD.Bcast(&rank, 1, MPI::INT, 0);
 
-float lm = static_cast<float>(c) / static_cast<float>(size);
-int lm1 = static_cast<int>(round(lm));
+        // Ostali procesi šalju svoje računalno ime procesu 0
+        MPI::Get_processor_name(computerName, nameLength);
+        MPI::COMM_WORLD.Send(computerName, nameLength, MPI::CHAR, 0, 0);
+    }
 
-fsm.open("input.txt");
-fsm.seekg(rang * lm1, ios::beg);
-
-if (rang != 0) {
-//Preskoči prvi red ako proces nije rang 0
-fsm.ignore(numeric_limits<streamsize>::max(), '\n');
-}
-
-while (fsm && v.size() < lm1) {
-getline(fsm, linija);
-v.push_back(linija);
-}
-
-fsm.close();
-
-MPI_Barrier(MPI::COMM_WORLD);
-
-if (rang < v.size()) {
-cout << "Proces ranga " << rang << " , je ucitao: " << v[rang] << endl;
-}
-
-MPI::Finalize();
- return 0;
+    MPI::Finalize();
+    return 0;
 }
