@@ -1,36 +1,87 @@
-#include <mpi.h>
+/*
+*Uporabom MPI-a izraditi simulaciju raspodijeljenog problema n
+filozofa. Pri svakoj promjeni program mora vizualno prikazati za
+sve filozofe što oni rade. Npr. kada filozof 4 ide jesti, tada treba
+ispis izgledati otprilike ovako: "Stanje filozofa: X o O X o" (X-jede,
+o-razmišlja, O-čeka na vilice).
+* Problem pet filozofa. Filozofi obavljaju samo dvije različite
+aktivnosti: misle ili jedu. To rade na poseban način. Na jednom
+okruglom stolu nalazi se pet tanjura te pet štapića (između
+svaka dva tanjura po jedan). Filozof prilazi stolu, uzima lijevi
+štapić, pa desni te jede. Zatim vraća štapiće na stol i odlazi
+misliti.
+* Program napisati korištenjem C++ funkcija
+*/
+
 #include <iostream>
-#include <vector>
+#include <mpi.h>
+#include <unistd.h>
 
-int main(int argc, char** argv) {
-    MPI_Init(&argc, &argv);
+#define N 5
 
-    int rank, size;
-	
-	rank = MPI::COMM_WORLD.Get_rank();
-    size = MPI::COMM_WORLD.Get_size();
-   // MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-   // MPI_Comm_size(MPI_COMM_WORLD, &size);
+using namespace std;
 
-   
-    std::vector<int> localVector(100, rank + 1);  // Primer: punjenje lokalnog vektora vrednostima rank + 1
+char state[N] = { 'o', 'o', 'o', 'o', 'o' };
 
-   
-    std::vector<int> globalVector(size * 100);
-    MPI_Gather(localVector.data(), 100, MPI_INT, globalVector.data(), 100, MPI_INT, 0, MPI_COMM_WORLD);
+void prikaziStanjaFilozofa(int rank) {
+    cout << "Stanja filozofa " << rank << ": ";
+    for (int i = 0; i < N; i++) {
+        cout << state[i] << "  ";
+    }
+    cout << endl;
+}
 
-   
-    if (rank == 0) {
-        int sum = 0;
-        for (int i = 0; i < size * 100; ++i) {
-            sum += globalVector[i];
-        }
-        double average = static_cast<double>(sum) / (size * 100);
-
-       
-        std::cout << "Srednja vrednost globalnog vektora: " << average << std::endl;
+void test(int rank) {
+    // 'O' == HUNGRY, 'X' == EATING, 'o' == THINKING
+    if (state[rank] == 'O' && state[(rank + 4) % N] != 'X' && state[(rank + 1) % N] != 'X') {
+        state[rank] = 'X';
+        MPI::COMM_WORLD.Bcast(&state[0], N, MPI::CHAR, rank);
     }
 
-    MPI_Finalize();
+    prikaziStanjaFilozofa(rank);
+}
+
+void take_forks(int rank) {
+    if (state[(rank + 4) % N] != 'X' && state[(rank + 1) % N] != 'X') {
+        state[rank] = 'O';
+        test(rank);
+        MPI::COMM_WORLD.Bcast(&state[0], N, MPI::CHAR, rank);
+    }
+}
+
+void return_forks(int rank) {
+    sleep(1);
+    state[rank] = 'o';
+    MPI::COMM_WORLD.Bcast(&state[0], N, MPI::CHAR, rank);
+}
+
+void filozof(int rank) {
+    while (true) {
+        sleep(2);
+        take_forks(rank);
+        sleep(0);
+        return_forks(rank);
+    }
+}
+
+int main(int argc, char **argv) {
+    MPI::Init(argc, argv);
+    int size, rank;
+    rank = MPI::COMM_WORLD.Get_rank();
+    size = MPI::COMM_WORLD.Get_size();
+
+    if (size != N) {
+        if (rank == 0) {
+            cout << "Ovaj program zahtijeva točno 5 procesa." << endl;
+        }
+        MPI::Finalize();
+        return 1;
+    }
+
+    filozof(rank);
+
+    MPI::Finalize();
     return 0;
 }
+
+
