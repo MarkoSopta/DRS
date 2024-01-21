@@ -1,58 +1,84 @@
-#include <mpi.h>
+/*
+Generirati proizvoljnu matricu. Distribuirati pojedni redak
+pojedinom računalu(procesu). Formirati donju trokutastu matricu
+sa ispisom naziva računala(procesa) koji je ispisao pojedini redak.
+Program napisati korištenjem C++ funkcija.
+*/
+#include <algorithm>
+#include <vector>
 #include <iostream>
 #include <cstdlib>
-#include <ctime>
-#include <vector>
+#include <mpi.h>
+
+using namespace std;
 
 
-int generateRandomNumber() {
-    return rand() % 100;
-}
-
-
-int calculateArithmeticSum(const std::vector<int>& numbers) {
-    int sum = 0;
-    for (int num : numbers) {
-        sum += num;
+vector<int> triangular_matrix(int redNumb, vector<vector<int>> &matrica) {
+    for (int i = redNumb + 1; i < matrica[redNumb].size(); i++) {
+        matrica[redNumb][i] = 0;
     }
-    return sum;
+    return matrica[redNumb];
 }
 
 int main(int argc, char** argv) {
-    MPI_Init(&argc, &argv);
+    MPI::Init(argc, argv);
+    MPI::Request request;
+    MPI::Status status;
 
-    int world_size, world_rank;
-	
-    // MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    // MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    int size, rank;
+    rank = MPI::COMM_WORLD.Get_rank();
+    size = MPI::COMM_WORLD.Get_size();
+    int dest_rank;
 
-    srand(time(NULL) + world_rank);
+    vector<vector<int>> matrix = {
+        {1, 2, 3, 4},
+        {5, 6, 7, 9},
+        {9, 8, 7, 6},
+        {5, 4, 3, 2}
+    };
 
-    int random_number = generateRandomNumber();
+    int red;
+    vector<int> used;
+    vector<int> nizMatrice;
 
-    std::vector<int> all_numbers(world_size);
-
-    MPI_Gather(&random_number, 1, MPI_INT, &all_numbers[0], 1, MPI_INT, 0, MPI::COMM_WORLD);
-
-    if (world_rank == 0) {
-        int arithmetic_sum = calculateArithmeticSum(all_numbers);
-        double arithmetic_mean = static_cast<double>(arithmetic_sum) / world_size;
-
-        MPI_Bcast(&arithmetic_mean, 1, MPI_DOUBLE, 0, MPI::COMM_WORLD);
-
-        for (int i = 0; i < world_size; ++i) {
-            double deviation_percent = ((double)all_numbers[i] - arithmetic_mean) / arithmetic_mean * 100.0;
-            std::cout << "Process " << i << ": Deviation = " << deviation_percent << "%" << std::endl;
-        }
+    
+    if (size < matrix.size()) {
+        cout << "Mora biti više procesa od redova matrice!";
     } else {
-        double arithmetic_mean;
-        MPI_Bcast(&arithmetic_mean, 1, MPI_DOUBLE, 0, MPI::COMM_WORLD);
+        
+        if (rank == 0) {
+            for (int i = 0; i < matrix.size(); ++i) {
+                do {
+                    
+                    dest_rank = (rank + rand() % size) + 1;
+                } while (find(used.begin(), used.end(), dest_rank) != used.end());
 
-        double deviation_percent = ((double)random_number - arithmetic_mean) / arithmetic_mean * 100.0;
-        std::cout << "Process " << world_rank << ": Deviation = " << deviation_percent << "%" << std::endl;
+                used.push_back(dest_rank);
+
+                
+                request = MPI::COMM_WORLD.Isend(&i, 1, MPI::INT, dest_rank, 0);
+                request.Wait();
+            }
+        } else {
+            
+            request = MPI::COMM_WORLD.Irecv(&red, 1, MPI::INT, 0, 0);
+            request.Wait(status);
+
+            
+            nizMatrice = triangular_matrix(red, matrix);
+
+            
+            cout << "Proces: " << rank << " obradjuje red: " << red << " red nakon obrade je: ";
+            for (const auto &element : nizMatrice) {
+                cout << element << " ";
+            }
+            cout << endl;
+        }
     }
 
-    MPI_Finalize();
-
+    MPI::Finalize();
     return 0;
 }
+
+
+
