@@ -39,9 +39,10 @@ void test(int rank) {
     }
 
     prikaziStanjaFilozofa(rank);
+    
 }
 
-void take_forks(int rank) {
+void takeForks(int rank) {
     if (state[(rank + 4) % N] != 'X' && state[(rank + 1) % N] != 'X') {
         state[rank] = 'O';
         test(rank);
@@ -49,7 +50,7 @@ void take_forks(int rank) {
     }
 }
 
-void return_forks(int rank) {
+void returnForks(int rank) {
     sleep(1);
     state[rank] = 'o';
     MPI::COMM_WORLD.Bcast(&state[0], N, MPI::CHAR, rank);
@@ -58,9 +59,9 @@ void return_forks(int rank) {
 void filozof(int rank) {
     while (true) {
         sleep(2);
-        take_forks(rank);
+        takeForks(rank);
         sleep(0);
-        return_forks(rank);
+        returnForks(rank);
     }
 }
 
