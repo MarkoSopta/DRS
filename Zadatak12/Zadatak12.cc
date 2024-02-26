@@ -7,47 +7,46 @@ Upotrijebite OpenMP directive za paralelno izvršavanje.
  A(i) = A(i-2) + A(i-1)
 */
 
-#include <iostream>
-#include <vector>
 #include <omp.h>
-using namespace std;
+#include <stdio.h>
+#include <stdlib.h>
+#define N 10
+int main(void) {
+  int x[N], y[N], z[N], c[N], zb[N];
+  int i, sum =0; 
 
-int main() {
-    const int N = 4;
-    const int M = 100;
-    int trh_numb;
-    vector<vector<int>> A(N, vector<int>(M, 1));
-
-    omp_set_num_threads(10);
-double start = omp_get_wtime();
-
-
-    #pragma omp parallel for
-    for(int n = 0; n < N; ++n) {
-        for(int i = 2; i < M; ++i) {
-            if(i == 2) {
-                A[n][i] = A[n][i] + A[n][i-1];
-            } else if(i==1){
-            A[n][i] = A[n][i];
-            }
-            else {
-                A[n][i] = A[n][i-2] + A[n][i-1];
-            }
-             trh_numb = omp_get_num_threads();
-        }
+  for (i = 0; i < N; i++) {
+    x[i] = i+1;
+    y[i] = i*2;
+    z[i] = i+2;
+    c[i] = i*3;
+  }
+  
+  omp_set_num_threads(4);
+  #pragma omp parallel shared(x, y, z, c, zb) private(i)
+  {
+    #pragma omp for
+    for (int i = 0; i < N; i++) {
+        
+	if(i==1) {
+	   x[i]+=x[0];
+	   y[i]+=y[0];
+	   z[i]+=z[0];
+	   c[i]+=c[0];
+	}
+		
+	if(i>1) {
+	   x[i]=x[i-2]+x[i-1];  // Prethodna vrijednost + sljedeća
+           y[i]=y[i-2]+y[i-1];
+           z[i]=z[i-2]+z[i-1];
+           c[i]=c[i-2]+c[i-1];
+	}
+		
+        zb[i]=x[i]+y[i]+z[i]+c[i];
+        sum+=zb[i];
 
     }
-    int total_sum = 0;
-    #pragma omp parallel for reduction(+:total_sum)
-    for(int n = 0; n < N; ++n) {
-        for(int i = 0; i < M; ++i) {
-            total_sum += A[n][i];
-        }
-    }
-    double end = omp_get_wtime();
+  }
+    printf("Ukupna suma 4 niza je: %d  \n\n",sum);
 
-    cout << start <<"  "<< end << " razlika je : "<< end-start<<endl;
-    cout << "Ukupni zbroj je: " << total_sum <<" Broj paralelnih procesa je "<< trh_numb <<endl;
-
-    return 0;
 }
